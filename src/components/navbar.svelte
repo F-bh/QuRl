@@ -1,15 +1,14 @@
 <nav class="w-full p-2 bg-teal-300">
     <div class="grid grid-cols-3">
-        <img/> <!-- todo add QR Code leading to GitHub here-->
+        <img src="qrcode.jpeg" class="h-12 self-center" alt="QR code leading to https://github.com/F-bh/QuRl"/> <!-- todo add QR Code leading to GitHub here-->
 
-    
-        <h1 class="text-center font-bold">
+        <h1 class="text-center font-bold self-center text-2xl">
             QuRi
         </h1>
         
 
-        <div class="grid justify-end text-right">
-            <a class="hover:bg-teal-200 hover:rounded-3xl hover:text-slate-500" href="https://github.com/F-bh/QuRl">
+        <div class="grid justify-end text-right self-center">
+            <a class="hover:bg-teal-200 hover:rounded-2xl hover:text-slate-500" href="https://github.com/F-bh/QuRl">
                 visit me on Github  🧑‍💻
             </a>
         </div>
