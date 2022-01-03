@@ -1,1 +1,5 @@
-<p class="text-red-300"> KEKW8</p>
+<script lang="ts">
+  import Editor from "../components/editor.svelte";
+</script>
+
+<Editor/>
