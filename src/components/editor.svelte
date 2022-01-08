@@ -1,38 +1,55 @@
 <script lang="ts">
   import { qrcode } from "../lib/qrcode.js"
 
-  let isDropHover = false;
-  let data = null;
+  let files: FileList;
+  let data: string;
+  let isDropHover: boolean = false;
   let corrLvl: number = 0;
+  let url: string = "https://quri.de/";
 
+  //TODO check file size and inform user if file would be too big
   $: imgUrl = function(): string {
-      var lvl = "L";
-      
+      let lvl = "L";
+
       switch (corrLvl) {
         case 1:
-          "M";
+          lvl = "M";
+          break;
         case 2:
-          "Q";
+          lvl = "Q";
+          break;
         case 3:
-          "H";
+          lvl = "H";
+          break;
         default:
-          "L";
+          lvl = "L";
+          break;
       }
 
-      var code = qrcode(0, lvl);
-      code.addData("KEKW!");
+      let code = qrcode(0, lvl);
+      code.addData(url + data);
       code.make();
       return code.createDataURL();
     }
 
 
-    function handleDrop(event: DragEvent){
-      //TODO implement
-    }
+    //TODO inform the user that only a single file is allowed on Drag and drop
+    //TODO save fileType information
+    $: {
+      let reader: FileReader = new FileReader();
+      let bString: string;
 
-    function handleUpload(){
-      //TODO implement
+      if (files && files.length === 1){      
+        reader.readAsBinaryString(files.item(0));
+        
+        reader.onload = () => {
+          data = btoa(reader.result as string);
+        };
+        //TODO inform user an error has occured
+        reader.onerror = () => {return;};
+      }
     }
+  
 </script>
 
 <div class="flex flex-col p-5 items-center">
@@ -49,11 +66,11 @@
 
     {:else}
       <!--  show drag and drop field  -->
-      <div on:drop|preventDefault={handleDrop} on:dragover|preventDefault on:dragenter={() =>{ isDropHover = true;}} on:dragleave={() =>{ isDropHover = false}} class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex flex-col justify-center"> 
+      <div on:drop|preventDefault={ (event) => files = event.dataTransfer.files } on:dragover|preventDefault on:dragenter={() =>{ isDropHover = true;}} on:dragleave={() =>{ isDropHover = false}} class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex flex-col justify-center"> 
         {#if !isDropHover}
         <p class="relative top-1/3 font-extrabold text-2xl text-center self-center">⬆️ drop your file ⬆️ <br> here to generate a code </p>
         <p class="relative top-1/3 font-light text-sm text-center self-center text-gray-800"> or click to choose a file </p>
-        <input type="file" class="cursor-pointer w-full h-full opacity-0">
+        <input bind:files type="file" class="cursor-pointer w-full h-full opacity-0">
         {/if}
       </div>
     {/if}
