@@ -13,7 +13,6 @@ const config = {
 
     // hydrate the <div id="svelte"> element in src/public/app.html
     target: "#svelte",
-    ssr: false,
 
     files:{
       assets: 'src/public/static',
@@ -22,6 +21,15 @@ const config = {
       template: 'src/public/app.html',
     },
   }
+}
+
+/** @type {import('@sveltejs/kit').Handle} */
+export async function handle({ request, resolve }) {
+	const response = await resolve(request, {
+		ssr: false
+	});
+
+	return response;
 }
 
 export default config;

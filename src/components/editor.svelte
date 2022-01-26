@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { globals } from "svelte/internal";
+
   import { qrcode } from "../lib/qrcode.js"
 
   let files: FileList;
@@ -36,8 +38,7 @@
     //TODO inform the user that only a single file is allowed on Drag and drop
     //TODO save fileType information
     $: {
-      let reader: FileReader = new FileReader();
-      let bString: string;
+      let reader: FileReader = new globals.FileReader()
 
       if (files && files.length === 1){      
         reader.readAsBinaryString(files.item(0));
