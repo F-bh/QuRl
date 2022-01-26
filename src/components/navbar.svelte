@@ -8,7 +8,7 @@
         
 
       <div class="grid justify-end text-right self-center">
-        <a class="hover:bg-teal-200 hover:rounded-2xl hover:text-slate-500" href="https://github.com/F-bh/QuRl">
+        <a class="p-1 hover:bg-teal-200 hover:rounded-2xl hover:text-slate-500" href="https://github.com/F-bh/QuRl">
           visit me on Github  🧑‍💻
         </a>
       </div>

@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { globals } from "svelte/internal";
-
   import { qrcode } from "../lib/qrcode.js"
 
   let files: FileList;
@@ -38,7 +36,7 @@
     //TODO inform the user that only a single file is allowed on Drag and drop
     //TODO save fileType information
     $: {
-      let reader: FileReader = new globals.FileReader()
+      let reader: FileReader = new FileReader()
 
       if (files && files.length === 1){      
         reader.readAsBinaryString(files.item(0));
@@ -54,17 +52,10 @@
 </script>
 
 <div class="flex flex-col p-5 items-center">
-  <div class="flex w-96 h-96 pb-5 justify-center">
+  <div class="flex flex-col w-96 h-96 pb-5 justify-center">
     {#if data != null}
       <!--  show QR-Code   -->
       <img src={ imgUrl() } alt="generated Code">  
-
-      <div class="flex flex-row">
-        <button> save  </button>
-        <button> print </button>
-        <button> reset </button>
-      </div>
-
     {:else}
       <!--  show drag and drop field  -->
       <div on:drop|preventDefault={ (event) => files = event.dataTransfer.files } on:dragover|preventDefault on:dragenter={() =>{ isDropHover = true;}} on:dragleave={() =>{ isDropHover = false}} class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex flex-col justify-center"> 
@@ -76,6 +67,14 @@
       </div>
     {/if}
   </div>
+
+  {#if data != null}
+    <div class="flex flex-row pb-5">
+      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
+      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
+      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
+    </div>
+  {/if}
     
   <div class="bg-zinc-100 rounded-md drop-shadow-xl">
     <div class="bg-zinc-200 rounded-md">
