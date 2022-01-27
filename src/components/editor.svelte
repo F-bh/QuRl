@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { qrcode } from "../lib/qrcode.js"
+  import { qrcode } from "../lib/qrcode.js";
+  import pako from "../../node_modules/pako";
 
   let files: FileList;
   let data: string;
   let isDropHover: boolean = false;
   let corrLvl: number = 0;
   let url: string = "https://quri.de/";
+  let compressionEnabled: boolean = true;
 
   //TODO check file size and inform user if file would be too big
   $: imgUrl = function(): string {
@@ -36,16 +38,22 @@
     //TODO inform the user that only a single file is allowed on Drag and drop
     //TODO save fileType information
     $: {
-      let reader: FileReader = new FileReader()
-
-      if (files && files.length === 1){      
-        reader.readAsBinaryString(files.item(0));
-        
-        reader.onload = () => {
-          data = btoa(reader.result as string);
-        };
-        //TODO inform user an error has occured
-        reader.onerror = () => {return;};
+      if (files && files.length === 1){  
+        let reader = new FileReader();            
+        if (compressionEnabled == true){
+          reader.onload = () => {
+            let buf: Uint8Array = new Uint8Array(reader.result as ArrayBuffer); //TODO inform user an error has occured
+            let compressed: Uint8Array = pako.deflate(buf);
+            data = btoa(compressed.toString());
+          }
+          reader.readAsArrayBuffer(files.item(0));
+        }
+        else{
+          reader.onload = () =>{
+            data = btoa(reader.result as string);
+          }
+          reader.readAsBinaryString(files.item(0));
+        }
       }
     }
   
@@ -72,18 +80,28 @@
     <div class="flex flex-row pb-5">
       <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
       <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
-      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
+      <button on:click={() => {data = null; files = null;}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
     </div>
   {/if}
     
-  <div class="bg-zinc-100 rounded-md drop-shadow-xl">
-    <div class="bg-zinc-200 rounded-md">
+  <div class="bg-zinc-100 rounded-md drop-shadow-xl flex flex-col p-5">
+    
+    <div class="bg-zinc-200 rounded-md p-2">
       <p class="font-medium text-center" title="determins the amount of space used for error correction higher = less data"> current correction level: { corrLvl } </p>
-      <div class="flex flex-row">
+      <div class="flex flex-row justify-center">
         <p class="p-3"> min </p>
         <input type="range" min="0" max="3" bind:value={ corrLvl }>
         <p class="p-3"> max </p>
       </div>
+    </div>
+    
+    <div class="bg-zinc-200 grid grid-cols-2 rounded-md mt-3 p-2">
+        <div class="p-3 self-center">
+          <p> enable file compression</p>
+          <p class="text-xs font-light"> may increase the size of very small files </p>
+        </div>
+        <input class="p-3 m-5 h-5 w-5 justify-self-end self-center" type="checkbox" bind:checked={ compressionEnabled }>
     </div> 
   </div>
+
 </div>
