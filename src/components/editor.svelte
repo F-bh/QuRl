@@ -4,12 +4,17 @@
 
   let files: FileList;
   let data: string;
+  let errorMessage: string = null;
   let isDropHover: boolean = false;
   let corrLvl: number = 0;
   let url: string = "https://quri.de/";
   let compressionEnabled: boolean = true;
 
-  //TODO check file size and inform user if file would be too big
+  function reset(){
+    data = null;
+    errorMessage = null;
+    files = null;
+  }
   $: imgUrl = function(): string {
       let lvl = "L";
 
@@ -30,12 +35,18 @@
 
       let code = qrcode(0, lvl);
       code.addData(url + data);
-      code.make();
+      try{
+        code.make();
+      }
+      catch(e){
+        let sizesInBytes = e.slice(23, e.length-2).split('>');
+        errorMessage = `🛑🛑\nThe given file is too large.\nYou could try enabling or disabling compression and\nreducing the correction level.\nYour filesize: ${sizesInBytes[0]/1000}kb\nmax. allowed filesize: ${sizesInBytes[1]/1000}kb\n🛑🛑`
+        return null;
+      }
+      errorMessage = null;
       return code.createDataURL();
     }
 
-
-    //TODO inform the user that only a single file is allowed on Drag and drop
     //TODO save fileType information
     $: {
       if (files && files.length === 1){  
@@ -55,17 +66,28 @@
           reader.readAsBinaryString(files.item(0));
         }
       }
+      else if(files && files.length > 1){
+        alert("at the moment only the creation of a code for a single file is supported")
+        reset();        
+      }
     }
   
 </script>
 
 <div class="flex flex-col p-5 items-center">
   <div class="flex flex-col w-96 h-96 pb-5 justify-center">
-    {#if data != null}
-      <!--  show QR-Code   -->
-      <img src={ imgUrl() } alt="generated Code">  
+    
+    {#if data != null && errorMessage == null}
+      <img src={ imgUrl() } alt="generated Code">
+    {:else if errorMessage != null}
+      <div class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex p-3">
+        <p class="text-red-500 text-center self-center justify-self-center">
+        {#each errorMessage.split("\n") as paragraph}
+            {paragraph} <br>
+        {/each}
+        </p>
+      </div>
     {:else}
-      <!--  show drag and drop field  -->
       <div on:drop|preventDefault={ (event) => files = event.dataTransfer.files } on:dragover|preventDefault on:dragenter={() =>{ isDropHover = true;}} on:dragleave={() =>{ isDropHover = false}} class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex flex-col justify-center"> 
         {#if !isDropHover}
         <p class="relative top-1/3 font-extrabold text-2xl text-center self-center">⬆️ drop your file ⬆️ <br> here to generate a code </p>
@@ -78,9 +100,14 @@
 
   {#if data != null}
     <div class="flex flex-row pb-5">
-      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
-      <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
-      <button on:click={() => {data = null; files = null;}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
+      {#if errorMessage == null}
+        <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
+        <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
+      {/if}
+      {#if errorMessage != null}
+        <button on:click={() => {files = files; data = null; errorMessage = null;}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-sky-400 rounded-2xl"> apply changes </button>
+      {/if}
+      <button on:click={reset} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
     </div>
   {/if}
     
