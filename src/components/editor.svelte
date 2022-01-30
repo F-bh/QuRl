@@ -2,22 +2,41 @@
   import { qrcode } from "../lib/qrcode.js";
   import pako from "../../node_modules/pako";
 
+  enum dataException{
+    multiple = "multiple files",
+    none = "no file"
+  }  
+
   let files: FileList;
-  let data: string;
   let errorMessage: string = null;
   let isDropHover: boolean = false;
   let corrLvl: number = 0;
   let url: string = "https://quri.de/";
   let compressionEnabled: boolean = true;
+  let loading = false;
+  let imgUrl = null;
 
   function reset(){
-    data = null;
     errorMessage = null;
+    imgUrl = null;
+    isDropHover = false;
     files = null;
+    loading = false;
   }
-  $: imgUrl = function(): string {
-      let lvl = "L";
+  
+  $:{
+    corrLvl;
+    compressionEnabled;
+    files;
+    if (files != null && errorMessage == null){
+      generateUrl();
+    }
+  }
 
+  async function generateUrl() {
+      loading = true;
+
+      let lvl = "L";
       switch (corrLvl) {
         case 1:
           lvl = "M";
@@ -34,54 +53,82 @@
       }
 
       let code = qrcode(0, lvl);
-      code.addData(url + data);
+      try{
+        let data = await getData();
+        code.addData(url + data);
+      }
+      catch(e){
+        switch (e as dataException){
+          case dataException.multiple :
+            alert("at the moment only the creation of a code for a single file is supported")
+            reset();
+            break;
+        }
+        console.log("alert");
+        loading = false;
+        return;
+      }
       try{
         code.make();
       }
       catch(e){
         let sizesInBytes = e.slice(23, e.length-2).split('>');
         errorMessage = `🛑🛑\nThe given file is too large.\nYou could try enabling or disabling compression and\nreducing the correction level.\nYour filesize: ${sizesInBytes[0]/1000}kb\nmax. allowed filesize: ${sizesInBytes[1]/1000}kb\n🛑🛑`
-        return null;
+        loading = false;
+        return;
       }
       errorMessage = null;
-      return code.createDataURL();
+      loading = false;
+      imgUrl = code.createDataURL();
     }
 
-    //TODO save fileType information
-    $: {
-      if (files && files.length === 1){  
-        let reader = new FileReader();            
-        if (compressionEnabled == true){
+  //TODO save fileType information
+  //add filesize check
+  function getData(): Promise<string>{
+    if (files && files.length == 1){ 
+      let reader = new FileReader();
+      if (compressionEnabled == true){
+        return new Promise ((resolve, _) => {
           reader.onload = () => {
             let buf: Uint8Array = new Uint8Array(reader.result as ArrayBuffer); //TODO inform user an error has occured
             let compressed: Uint8Array = pako.deflate(buf);
-            data = btoa(compressed.toString());
+            resolve(btoa(compressed.toString()));
           }
           reader.readAsArrayBuffer(files.item(0));
-        }
-        else{
+        });
+      }
+      else{
+        return new Promise((resolve, _) => {
           reader.onload = () =>{
-            data = btoa(reader.result as string);
+            resolve(btoa(reader.result as string));
           }
           reader.readAsBinaryString(files.item(0));
-        }
-      }
-      else if(files && files.length > 1){
-        alert("at the moment only the creation of a code for a single file is supported")
-        reset();        
+        });
       }
     }
+    else if(files && files.length > 1){
+      throw dataException.multiple;
+    }
+    else{
+      throw dataException.none;
+    }
+  }
+     
   
 </script>
 
 <div class="flex flex-col p-5 items-center">
   <div class="flex flex-col w-96 h-96 pb-5 justify-center">
-    
-    {#if data != null && errorMessage == null}
-      <img src={ imgUrl() } alt="generated Code">
+    {#if loading && errorMessage == null}
+      <div class={"bg-zinc-200 w-full h-full rounded-md drop-shadow-xl p-3 flex flex-col items-center justify-center"}>
+        <img class="p-10" src="src/public/static/loading_grid.svg" alt="loading">
+        <p> loading please wait </p>
+      </div>
+    {:else if !loading && errorMessage == null && imgUrl != null}
+      <img src={ imgUrl } alt="generated Code">
     {:else if errorMessage != null}
       <div class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex p-3">
-        <p class="text-red-500 text-center self-center justify-self-center">
+        <p class="text-red-500 text-center self-center">
         {#each errorMessage.split("\n") as paragraph}
             {paragraph} <br>
         {/each}
@@ -98,21 +145,20 @@
     {/if}
   </div>
 
-  {#if data != null}
+  {#if imgUrl != null || !loading && errorMessage != null }
     <div class="flex flex-row pb-5">
       {#if errorMessage == null}
         <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
         <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
       {/if}
       {#if errorMessage != null}
-        <button on:click={() => {files = files; data = null; errorMessage = null;}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-sky-400 rounded-2xl"> apply changes </button>
+        <button on:click={() => {errorMessage = null; generateUrl()}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-sky-400 rounded-2xl"> apply changes </button>
       {/if}
       <button on:click={reset} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
     </div>
   {/if}
     
   <div class="bg-zinc-100 rounded-md drop-shadow-xl flex flex-col p-5">
-    
     <div class="bg-zinc-200 rounded-md p-2">
       <p class="font-medium text-center" title="determins the amount of space used for error correction higher = less data"> current correction level: { corrLvl } </p>
       <div class="flex flex-row justify-center">
@@ -130,5 +176,4 @@
         <input class="p-3 m-5 h-5 w-5 justify-self-end self-center" type="checkbox" bind:checked={ compressionEnabled }>
     </div> 
   </div>
-
 </div>
