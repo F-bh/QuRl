@@ -2,16 +2,31 @@
   import { qrcode } from "../lib/qrcode.js";
   import pako from "../../node_modules/pako";
 
-  enum dataException{
-    multiple = "multiple files",
-    none = "no file"
-  }  
+  enum DataExceptionMsg{
+    multiple = "multiple files", //val: none
+    size = "too big", // val: number
+    none = "no file" // val: none
+  }
+
+  class DataException{
+    //should probably check if msg matches val type
+    constructor(msg: DataExceptionMsg, val: any){
+        this.msg = msg;
+        this.val = val;
+    }
+    readonly msg: DataExceptionMsg
+    readonly val: any //determined by the message
+  }
+
+  const URL: string = "https://quri.de/";
+  //correction level to bytes allowed
+  const MAXFILESIZES: Map<number, number> = new Map([[0, 2364], [1, 1867], [2, 1332], [3, 1002]]);
 
   let files: FileList;
   let errorMessage: string = null;
   let isDropHover: boolean = false;
   let corrLvl: number = 0;
-  let url: string = "https://quri.de/";
+  
   let compressionEnabled: boolean = true;
   let loading = false;
   let imgUrl = null;
@@ -55,16 +70,19 @@
       let code = qrcode(0, lvl);
       try{
         let data = await getData();
-        code.addData(url + data);
+        code.addData(URL + data);
       }
       catch(e){
-        switch (e as dataException){
-          case dataException.multiple :
+        let msg = e["msg"]
+        switch (msg){
+          case DataExceptionMsg.multiple:
             alert("at the moment only the creation of a code for a single file is supported")
             reset();
             break;
+          case DataExceptionMsg.size :
+            errorMessage = `🛑🛑\nThe given file is too large.\nYou could try enabling or disabling compression and\nreducing the correction level.\nYour filesize: ${e["val"]}kb\nmax. allowed filesize: ${MAXFILESIZES.get(corrLvl)}kb\n🛑🛑`
+            break;
         }
-        console.log("alert");
         loading = false;
         return;
       }
@@ -83,7 +101,6 @@
     }
 
   //TODO save fileType information
-  //add filesize check
   function getData(): Promise<string>{
     if (files && files.length == 1){ 
       let reader = new FileReader();
@@ -98,23 +115,27 @@
         });
       }
       else{
-        return new Promise((resolve, _) => {
-          reader.onload = () =>{
-            resolve(btoa(reader.result as string));
-          }
-          reader.readAsBinaryString(files.item(0));
-        });
+        //check filesize and throw an error if it is too large
+        if(MAXFILESIZES.get(corrLvl) < files[0].size){
+          throw new DataException(DataExceptionMsg.size, files[0].size)
+        }
+        else{
+          return new Promise((resolve, _) => {
+            reader.onload = () =>{
+              resolve(btoa(reader.result as string));
+            }
+            reader.readAsBinaryString(files.item(0));
+          });
+        }
       }
     }
     else if(files && files.length > 1){
-      throw dataException.multiple;
+      throw new DataException(DataExceptionMsg.multiple, null);
     }
     else{
-      throw dataException.none;
+      throw new DataException(DataExceptionMsg.none, null);
     }
   }
-     
-  
 </script>
 
 <div class="flex flex-col p-5 items-center">
