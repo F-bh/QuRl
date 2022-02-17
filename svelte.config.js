@@ -12,7 +12,6 @@ const config = {
     adapter: adapter(),
 
     // hydrate the <div id="svelte"> element in src/public/app.html
-    target: "#svelte",
 
     files:{
       assets: 'src/public/static',
