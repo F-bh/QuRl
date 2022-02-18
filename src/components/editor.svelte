@@ -1,6 +1,12 @@
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
   import { qrcode } from "../lib/qrcode.js";
   import pako from "../../node_modules/pako";
+
+  export let printState: boolean = false;
+
+  // allows us to send events to parent node
+  let dispatch = createEventDispatcher();
 
   enum DataExceptionMsg{
     multiple = "multiple files", //val: none
@@ -29,10 +35,10 @@
   let isDropHover: boolean = false;
   let corrLvl: number = 0;
   let compressionEnabled: boolean = true;
-  let loading = false;
-  let imgUrl = null;
-  let fileName = null;
-
+  let loading: boolean = false;
+  let imgUrl: string = null;
+  let fileName: string = null;
+ 
   function reset(){
     errorMessage = null;
     imgUrl = null;
@@ -41,7 +47,7 @@
     loading = false;
     fileName = null;
   }
-  
+
   $:{
     corrLvl;
     compressionEnabled;
@@ -154,7 +160,10 @@
         <p> loading please wait </p>
       </div>
     {:else if !loading && errorMessage == null && imgUrl != null}
-      <img src={ imgUrl } alt="generated Code">
+      <img src={ imgUrl } alt="generated Code for {fileName}">
+      {#if printState}
+      <p class="text-center"> {fileName} </p>
+      {/if}
     {:else if errorMessage != null}
       <div class="bg-zinc-300 w-full h-full rounded-md drop-shadow-xl flex p-3">
         <p class="text-red-500 text-center self-center">
@@ -174,45 +183,46 @@
     {/if}
   </div>
 
-  {#if imgUrl != null || !loading && errorMessage != null }
-    <div class="flex flex-row pb-5">
-      {#if errorMessage == null}
-        <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> save  </button>
-        <button class="m-3 pb-2 pt-2 pl-5 pr-5 bg-yellow-400 rounded-2xl"> print </button>
-      {/if}
-      {#if errorMessage != null}
-        <button on:click={() => {errorMessage = null; generateUrl()}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-sky-400 rounded-2xl"> apply changes </button>
-      {/if}
-      <button on:click={reset} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
-    </div>
-  {/if}
-    
-  <div class="bg-zinc-100 rounded-md drop-shadow-xl flex flex-col p-5">
-    <p class="font-extrabold m-3 text-center text-xl"> settings </p>
-    <div class="bg-zinc-200 rounded-md p-2">
-      <p class="font-medium text-center" title="determins the amount of space used for error correction higher = less data"> current correction level: { corrLvl } </p>
-      <div class="flex flex-row justify-center">
-        <p class="p-3"> min </p>
-        <input type="range" min="0" max="3" bind:value={ corrLvl }>
-        <p class="p-3"> max </p>
-      </div>
-    </div>
-    
-    <div class="bg-zinc-200 grid grid-cols-2 rounded-md mt-3 p-2">
-        <div class="p-3 self-center">
-          <p> enable file compression</p>
-          <p class="text-xs font-light"> may increase the size of very small files </p>
-        </div>
-        <input class="p-3 m-5 h-5 w-5 justify-self-end self-center" type="checkbox" bind:checked={ compressionEnabled }>
-    </div>
-    
-    {#if fileName != null}
-      <div class="bg-zinc-200 rounded-md p-2 mt-3">
-        <p class="font-medium text-center" title="determins the amount of space used for the file name, shorter = less data"> current size of the file name: { new Blob([fileName]).size } bytes </p>
-        <div class="flex flex-row justify-center">
-          <input bind:value={fileName} type="text" class="mt-3 bg-slate-100 rounded-md p-1">
-        </div>
+  {#if !printState }
+    {#if imgUrl != null || !loading && errorMessage != null}
+      <div class="flex flex-row pb-5">
+        {#if errorMessage == null}
+          <button on:click={() =>{dispatch("print", true)}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-lime-400 rounded-2xl"> print </button>
+        {/if}
+        {#if errorMessage != null}
+          <button on:click={() => {errorMessage = null; generateUrl()}} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-sky-400 rounded-2xl"> apply changes </button>
+        {/if}
+        <button on:click={reset} class="m-3 pb-2 pt-2 pl-5 pr-5 bg-red-400 rounded-2xl"> reset </button>
       </div>
     {/if}
-  </div>
+      
+    <div class="bg-zinc-100 rounded-md drop-shadow-xl flex flex-col p-5">
+      <p class="font-extrabold m-3 text-center text-xl"> settings </p>
+      <div class="bg-zinc-200 rounded-md p-2">
+        <p class="font-medium text-center" title="determins the amount of space used for error correction higher = less data"> current correction level: { corrLvl } </p>
+        <div class="flex flex-row justify-center">
+          <p class="p-3"> min </p>
+          <input type="range" min="0" max="3" bind:value={ corrLvl }>
+          <p class="p-3"> max </p>
+        </div>
+      </div>
+      
+      <div class="bg-zinc-200 grid grid-cols-2 rounded-md mt-3 p-2">
+          <div class="p-3 self-center">
+            <p> enable file compression</p>
+            <p class="text-xs font-light"> may increase the size of very small files </p>
+          </div>
+          <input class="p-3 m-5 h-5 w-5 justify-self-end self-center" type="checkbox" bind:checked={ compressionEnabled }>
+      </div>
+      
+      {#if fileName != null}
+        <div class="bg-zinc-200 rounded-md p-2 mt-3">
+          <p class="font-medium text-center" title="determins the amount of space used for the file name, shorter = less data"> current size of the file name: { new Blob([fileName]).size } bytes </p>
+          <div class="flex flex-row justify-center">
+            <input bind:value={fileName} type="text" class="mt-3 bg-slate-100 rounded-md p-1">
+          </div>
+        </div>
+      {/if}
+    </div>
+  {/if}
 </div>
